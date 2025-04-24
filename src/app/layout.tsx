@@ -12,6 +12,11 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const metadata: Metadata = {
+  title: 'Teste Auth',
+  description: 'Projeto Desafio Técnico',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
