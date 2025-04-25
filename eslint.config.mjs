@@ -32,6 +32,8 @@ const eslintConfig = [
       'node_modules',
       'next-env.d.ts',
       'next.config.ts',
+      'src/components/ui/*',
+      './src/components/ui/sonner.tsx',
       'yarn.lock',
     ],
     rules: {
@@ -52,6 +54,9 @@ const eslintConfig = [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'prettier/prettier': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      'react/jsx-uses-react': 'off',
     },
     settings: {
       react: {
