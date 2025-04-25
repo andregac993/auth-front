@@ -24,6 +24,7 @@ const mockRedirect = require('next/navigation').redirect;
 
 describe('SignupPage', () => {
   beforeEach(() => {
+    // Resetando mocks antes de cada teste
     mockSignupAction.mockReset();
     mockShowSuccessToast.mockReset();
     mockShowErrorToast.mockReset();
@@ -69,7 +70,7 @@ describe('SignupPage', () => {
       expect(mockSignupAction).toHaveBeenCalled();
       expect(mockShowSuccessToast).toHaveBeenCalledWith(
         'Cadastro realizado com sucesso!',
-        'Você já pode fazer login.',
+        'Você já pode fazer user-login.',
       );
       expect(mockRedirect).toHaveBeenCalledWith('/login');
     });
@@ -83,29 +84,35 @@ describe('SignupPage', () => {
 
     render(<SignupPage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/nome completo/i), {
+    fireEvent.change(screen.getByTestId(/name/i), {
       target: { value: 'André' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/seu@email.com/i), {
+
+    fireEvent.change(screen.getByTestId(/email/i), {
       target: { value: 'andre@example.com' },
     });
-    fireEvent.change(screen.getAllByPlaceholderText(/\*{6}/i)[0], {
+
+    fireEvent.change(screen.getByTestId(/password-input/i), {
       target: { value: '123456' },
     });
-    fireEvent.change(screen.getAllByPlaceholderText(/\*{6}/i)[1], {
+
+    fireEvent.change(screen.getByTestId(/confirm-password/i), {
       target: { value: '123456' },
     });
-    fireEvent.change(screen.getByPlaceholderText('00000000'), {
+
+    fireEvent.change(screen.getByTestId(/cep/i), {
       target: { value: '72547204' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Sua cidade'), {
+
+    fireEvent.change(screen.getByTestId(/city/i), {
       target: { value: 'Brasília' },
     });
-    fireEvent.change(screen.getByPlaceholderText('UF'), {
+
+    fireEvent.change(screen.getByTestId(/state/i), {
       target: { value: 'DF' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Cadastrar/i }));
 
     await waitFor(() => {
       expect(mockSignupAction).toHaveBeenCalled();
