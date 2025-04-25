@@ -1,3 +1,5 @@
+'use client';
+
 import { Eye, EyeOff, Loader2, MapPin, User, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   const token = req.cookies.get('auth-token')?.value;
-
   if (!token) {
     const { pathname } = req.nextUrl;
     if (pathname !== '/login') {
@@ -25,5 +24,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/profile', '/login', '/'],
+  matcher: ['/profile', '/signin', '/signup'],
 };
