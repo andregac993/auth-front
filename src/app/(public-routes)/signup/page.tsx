@@ -1,8 +1,31 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Loader2, MapPin, User, Mail, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { signupAction } from '@/app/(public-routes)/signup/actions';
+import { showErrorToast, showSuccessToast } from '@/lib/toast';
+import { redirect } from 'next/navigation';
 
 const signupSchema = z
   .object({
@@ -22,92 +45,295 @@ const signupSchema = z
 type SignupData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SignupData>({
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const form = useForm<SignupData>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      passwordConfirmation: '',
+      cep: '',
+      city: '',
+      state: '',
+    },
   });
 
   const onSubmit = async (data: SignupData) => {
-    console.log('Signup data:', data);
-    // Aqui você chama sua API: POST /signup
+    setIsLoading(true);
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+
+    const result = await signupAction(formData);
+    if (!result.success) {
+      showErrorToast('Erro ao criar usuário', result.message);
+    } else {
+      showSuccessToast(
+        'Cadastro realizado com sucesso!',
+        'Você já pode fazer login.',
+      );
+      form.reset();
+      redirect('/login');
+    }
+    setIsLoading(false);
+  };
+
+  const fetchAddressByCep = async (cep: string) => {
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+
+        if (!data.erro) {
+          form.setValue('city', data.localidade);
+          form.setValue('state', data.uf);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+      }
+    }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="mx-auto mt-16 flex max-w-sm flex-col gap-4"
-    >
-      <h1 className="text-center text-2xl font-semibold">Criar conta</h1>
+    <div className="container flex min-h-screen items-center justify-center py-12">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center text-2xl font-bold">
+            Criar conta
+          </CardTitle>
+          <CardDescription className="text-center">
+            Preencha os dados abaixo para se cadastrar
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                          <Input
+                            data-testid={'name'}
+                            placeholder="Digite seu nome completo"
+                            className="pl-10"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-      <input
-        placeholder="Nome"
-        type="text"
-        {...register('name')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-mail</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                          <Input
+                            data-testid={'email'}
+                            placeholder="seu@email.com"
+                            type="email"
+                            className="pl-10"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-      <input
-        placeholder="E-mail"
-        type="email"
-        {...register('email')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.email && <p className="text-red-500">{errors.email.message}</p>}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Senha</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                            <Input
+                              data-testid={'password-input'}
+                              placeholder="******"
+                              type={showPassword ? 'text' : 'password'}
+                              className="pr-10 pl-10"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground absolute top-0 right-0 h-full px-3 py-2"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-      <input
-        placeholder="Senha"
-        type="password"
-        {...register('password')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.password && (
-        <p className="text-red-500">{errors.password.message}</p>
-      )}
+                  <FormField
+                    control={form.control}
+                    name="passwordConfirmation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirmar senha</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                            <Input
+                              data-testid={'confirm-password'}
+                              placeholder="******"
+                              type={showConfirmPassword ? 'text' : 'password'}
+                              className="pr-10 pl-10"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground absolute top-0 right-0 h-full px-3 py-2"
+                              onClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                              }
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-      <input
-        placeholder="Confirmar senha"
-        type="password"
-        {...register('passwordConfirmation')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.passwordConfirmation && (
-        <p className="text-red-500">{errors.passwordConfirmation.message}</p>
-      )}
+                <div className="space-y-4">
+                  <h3 className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                    <MapPin className="h-4 w-4" />
+                    Endereço
+                  </h3>
 
-      <input
-        placeholder="CEP"
-        type="text"
-        {...register('cep')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.cep && <p className="text-red-500">{errors.cep.message}</p>}
+                  <FormField
+                    control={form.control}
+                    name="cep"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-testid={'cep'}
+                            placeholder="00000000"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              fetchAddressByCep(e.target.value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-      <input
-        placeholder="Cidade"
-        type="text"
-        {...register('city')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.city && <p className="text-red-500">{errors.city.message}</p>}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cidade</FormLabel>
+                          <FormControl>
+                            <Input
+                              data-testid={'city'}
+                              placeholder="Sua cidade"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-      <input
-        placeholder="Estado"
-        type="text"
-        {...register('state')}
-        className="input border-2 border-gray-300"
-      />
-      {errors.state && <p className="text-red-500">{errors.state.message}</p>}
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estado</FormLabel>
+                          <FormControl>
+                            <Input
+                              data-testid={'state'}
+                              placeholder="UF"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
 
-      <button
-        type="submit"
-        className="rounded bg-black py-2 text-white hover:bg-gray-800"
-      >
-        Cadastrar
-      </button>
-    </form>
+              <Button
+                role={'button'}
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  'Cadastrar'
+                )}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-muted-foreground text-sm">
+            Já possui uma conta?{' '}
+            <a
+              href="/login"
+              className="text-primary font-medium hover:underline"
+            >
+              Faça login
+            </a>
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
