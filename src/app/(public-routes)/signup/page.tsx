@@ -1,9 +1,3 @@
-'use client';
-
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2, MapPin, User, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,82 +17,19 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { signupAction } from '@/app/(public-routes)/signup/actions';
-import { showErrorToast, showSuccessToast } from '@/lib/toast';
-import { redirect } from 'next/navigation';
-
-const signupSchema = z
-  .object({
-    name: z.string().min(2, 'Nome é obrigatório'),
-    email: z.string().email('E-mail inválido'),
-    password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
-    passwordConfirmation: z.string().min(6),
-    cep: z.string().min(8, 'CEP inválido'),
-    city: z.string().min(2, 'Cidade é obrigatória'),
-    state: z.string().min(2, 'Estado é obrigatório'),
-  })
-  .refine((data) => data.password === data.passwordConfirmation, {
-    message: 'As senhas não coincidem',
-    path: ['passwordConfirmation'],
-  });
-
-type SignupData = z.infer<typeof signupSchema>;
+import { UseSignup } from '@/app/(public-routes)/signup/hooks';
 
 export default function SignupPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const form = useForm<SignupData>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      passwordConfirmation: '',
-      cep: '',
-      city: '',
-      state: '',
-    },
-  });
-
-  const onSubmit = async (data: SignupData) => {
-    setIsLoading(true);
-    const formData = new FormData();
-
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    const result = await signupAction(formData);
-    if (!result.success) {
-      showErrorToast('Erro ao criar usuário', result.message);
-    } else {
-      showSuccessToast(
-        'Cadastro realizado com sucesso!',
-        'Você já pode fazer login.',
-      );
-      form.reset();
-      redirect('/login');
-    }
-    setIsLoading(false);
-  };
-
-  const fetchAddressByCep = async (cep: string) => {
-    if (cep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-        const data = await response.json();
-
-        if (!data.erro) {
-          form.setValue('city', data.localidade);
-          form.setValue('state', data.uf);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
-      }
-    }
-  };
+  const {
+    isLoading,
+    setShowPassword,
+    showPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    onSubmit,
+    fetchAddressByCep,
+    form,
+  } = UseSignup();
 
   return (
     <div className="container flex min-h-screen items-center justify-center py-12">
@@ -177,19 +108,19 @@ export default function SignupPage() {
                               className="pr-10 pl-10"
                               {...field}
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground absolute top-0 right-0 h-full px-3 py-2"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
+                            <div className="absolute inset-y-0 right-0">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setShowPassword(!showPassword)}
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -213,21 +144,23 @@ export default function SignupPage() {
                               className="pr-10 pl-10"
                               {...field}
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground absolute top-0 right-0 h-full px-3 py-2"
-                              onClick={() =>
-                                setShowConfirmPassword(!showConfirmPassword)
-                              }
-                            >
-                              {showConfirmPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
+                            <div className="absolute inset-y-0 right-0 flex items-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-full px-3 py-2"
+                                onClick={() =>
+                                  setShowConfirmPassword(!showConfirmPassword)
+                                }
+                              >
+                                {showConfirmPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </FormControl>
                         <FormMessage />

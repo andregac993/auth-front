@@ -1,65 +1,55 @@
 'use server';
 
-import { z } from 'zod';
-
-const signupSchema = z
-  .object({
-    name: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(6),
-    passwordConfirmation: z.string().min(6),
-    cep: z.string().min(8),
-    city: z.string().min(2),
-    state: z.string().min(2),
-  })
-  .refine((data) => data.password === data.passwordConfirmation, {
-    message: 'Senhas não coincidem',
-    path: ['passwordConfirmation'],
-  });
+import {
+  SignupActionResponse,
+  SignupErrorResponse,
+  SignupSuccessResponse,
+} from '@/@types/response/response-sign-up';
+import { SignupRequest } from '@/@types/request/request-sign-up';
 
 export async function signupAction(
   formData: FormData,
-): Promise<{ success: boolean; message?: string }> {
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = signupSchema.safeParse(raw);
+): Promise<SignupActionResponse> {
+  try {
+    const raw = Object.fromEntries(formData.entries());
 
-  if (!parsed.success) {
-    console.error('Erros de validação:', parsed.error.flatten().fieldErrors);
-    return { success: false, message: 'Erro de validação dos campos' };
-  }
-
-  const payload = {
-    user: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      password: parsed.data.password,
-      password_confirmation: parsed.data.passwordConfirmation,
-      address_attributes: {
-        zip_code: parsed.data.cep,
-        city: parsed.data.city,
-        state: parsed.data.state,
+    const payload: SignupRequest = {
+      user: {
+        name: raw.name as string,
+        email: raw.email as string,
+        password: raw.password as string,
+        password_confirmation: raw.passwordConfirmation as string,
+        address_attributes: {
+          zip_code: raw.cep as string,
+          city: raw.city as string,
+          state: raw.state as string,
+        },
       },
-    },
-  };
+    };
 
-  const res = await fetch('http://localhost:3080/api/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+    const res = await fetch('http://localhost:3001/api/user-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-  if (!res.ok) {
-    const data = await res.json();
-    console.log('>>>', data);
-    const errorMessage =
-      data.message ||
-      (Array.isArray(data.errors)
-        ? data.errors.join(', ')
-        : 'Erro desconhecido');
+    if (!res.ok) {
+      const error: SignupErrorResponse = await res.json();
+      const errorMessage = Object.entries(error.error)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
 
-    console.error('Erro no backend:', errorMessage);
-    return { success: false, message: errorMessage };
+      return { success: false, message: errorMessage };
+    }
+
+    const data: SignupSuccessResponse = await res.json();
+
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error('Erro inesperado:', error);
+    return { success: false, message: 'Erro desconhecido' };
   }
-
-  return { success: true };
 }
